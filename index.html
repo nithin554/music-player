@@ -1,0 +1,137 @@
+<html>
+    <head>
+		<style>
+			#player{
+				width: 100%;
+			}
+			#track {
+				width: 100%;
+				text-align: center;
+				border-style: solid;
+				border-width: 1px;
+				border-radius: 50px;
+				padding-top: 10px;
+				height: 30px;
+			}
+		</style>
+    </head>
+    <body>
+        <div>
+			<p id="track">Player Idle ...</p>
+            <audio controls id="player" src="" preload="none"></audio>
+        </div>
+		<br>
+		<div id="albums" style="display: flex;">
+
+		</div>
+		<br>
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-app.js";
+            import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-analytics.js";
+            import { getStorage, ref, getDownloadURL, listAll  } from "https://www.gstatic.com/firebasejs/9.8.1/firebase-storage.js";
+            const firebaseConfig = {
+              apiKey: "AIzaSyBP13cZOxVD9QyuVlWNVLfSBzhehXbX5y0",
+              authDomain: "music-player-afb64.firebaseapp.com",
+              projectId: "music-player-afb64",
+              storageBucket: "music-player-afb64.appspot.com",
+              messagingSenderId: "853756578774",
+              appId: "1:853756578774:web:585afc7b93a8bedd6bb277",
+              measurementId: "G-NW0ZCCPE9J"
+            };
+            const app = initializeApp(firebaseConfig);
+            const analytics = getAnalytics(app);
+			const storage = getStorage(app);
+            const storageRef = ref(storage);
+			function createButton(path, trackSrc) {
+				var pathArray = path.split("/");
+				var albumNameParam = pathArray[0];
+				var trackName = pathArray[1].slice(0, -4);
+				var trackListElement = document.getElementById(albumNameParam);
+				var buttonElement = document.createElement("button");
+				buttonElement.style.backgroundColor = "white";
+				buttonElement.style.width = "100%";
+				buttonElement.style.height = "50px";
+				buttonElement.style.textAlign = "center";
+				buttonElement.style.borderStyle = "none";
+				buttonElement.value = trackSrc;
+				buttonElement.className = "tracks";
+				buttonElement.innerText = trackName;
+				buttonElement.id = trackName;
+				buttonElement.addEventListener("click", (event) => {
+					selectedTrackColor(trackName);
+					playTrack(trackName, event.target.value)
+				});
+				buttonElement.addEventListener("mouseover", mouseoverColor, false);
+				buttonElement.addEventListener("mouseout", mouseoutColor, false);
+				trackListElement.appendChild(buttonElement);
+			}
+			function mouseoverColor(event) {
+				event.target.style.backgroundColor = "lightgrey";
+			}
+			function mouseoutColor(event) {
+				event.target.style.backgroundColor = "white";
+			}
+			function selectedTrackColor(trackName) {
+				var buttons = document.getElementsByClassName("tracks");
+				for (let i = 0; i < buttons.length; i++) {
+					if(buttons[i].innerText == trackName) {
+						buttons[i].style.backgroundColor = "lightgrey";
+						buttons[i].removeEventListener("mouseout", mouseoutColor, false)
+						continue;
+					}
+					buttons[i].style.backgroundColor = "white";
+					buttons[i].addEventListener("mouseout", mouseoutColor, false);
+				};
+			}
+			function playTrack(trackName, url) {
+				const player = document.getElementById('player');
+				player.setAttribute('src', url);
+				var trackTitle = document.getElementById("track");
+				trackTitle.innerHTML = "Playing " + trackName + " now..."
+				player.play();
+			}
+			function createDiv(albumNameParam) {
+				var body = document.getElementById("albums");
+				var album = document.createElement("div");
+				album.style.marginLeft = "2px";
+				album.style.borderStyle = "solid";
+				album.style.borderWidth = "1px";
+				album.style.width = "250px";
+				album.style.height = "auto";
+				album.id = albumNameParam;
+				var albumName = document.createElement("p");
+				albumName.style.width = "100%";
+				albumName.style.textAlign = "center";
+				albumName.style.paddingTop = "10px"
+				albumName.style.backgroundColor = "black";
+				albumName.style.color = "white";
+				albumName.style.margin = "0";
+				albumName.style.height = "30px";
+				albumName.innerText = albumNameParam;
+				album.appendChild(albumName);
+				body.appendChild(album);
+			}
+			function loadTracks() {
+				listAll(storageRef)
+					.then((res) => {
+						res.prefixes.forEach((folderRef) => {
+							createDiv(folderRef._location.path_);
+							var pathReference = ref(storage, folderRef._location.path_);
+							listAll(pathReference)
+								.then((res) => {
+									res.items.forEach((itemRef) => {
+										getDownloadURL(ref(storage, itemRef._location.path_))
+										.then((url) => {
+											createButton(itemRef._location.path_, url);
+										}).catch((error) => { console.log(error); });
+									});
+								}).catch((error) => { console.log(error); });
+						})
+					}).catch((error) => { console.log(error); });
+			};
+			document.addEventListener("DOMContentLoaded", function(){
+				loadTracks();
+			});
+        </script>
+    </body>
+</html>
